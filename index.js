@@ -72,10 +72,11 @@ client.on('interactionCreate', async interaction => {
 
 
 // تسجيل أمر السلاش
+// تسجيل أمر السلاش
 async function registerSlashCommand() {
   const commands = [
     new SlashCommandBuilder()
-      .setName('تحديث_الرتب')
+      .setName('refresh')  // ✅ تم التعديل هنا
       .setDescription('📋 إرسال قائمة محدثة بأعضاء الرتب الإدارية')
       .toJSON()
   ];
@@ -87,11 +88,48 @@ async function registerSlashCommand() {
       Routes.applicationGuildCommands(process.env.CLIENT_ID, GUILD_ID),
       { body: commands }
     );
-    console.log("✅ تم تسجيل أمر /تحديث_الرتب بنجاح");
+    console.log("✅ تم تسجيل أمر /refresh بنجاح");
   } catch (error) {
     console.error("❌ فشل تسجيل أمر السلاش:", error);
   }
 }
 
-// تسجيل الدخول
-client.login(process.env.BOT_TOKEN);
+// تفعيل الأمر
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  if (interaction.commandName === 'refresh') {  // ✅ تم التعديل هنا
+    await interaction.deferReply({ ephemeral: true });
+
+    try {
+      const guild = await client.guilds.fetch(GUILD_ID);
+      const channel = await guild.channels.fetch(CHANNEL_ID);
+      if (!channel || !channel.isTextBased()) {
+        return interaction.editReply({ content: '❌ لم يتم العثور على القناة المحددة أو لا يمكن الإرسال إليها.' });
+      }
+
+      const allMembers = await guild.members.fetch();
+
+      let message = `📋 **تقرير الرتب الإدارية**\n\n`;
+
+      for (const roleId of adminRoles) {
+        const role = await guild.roles.fetch(roleId);
+        if (!role) continue;
+
+        const members = allMembers.filter(member => member.roles.cache.has(roleId));
+        const mentions = members.map(member => `<@${member.user.id}>`);
+
+        message += `🔸 <@&${roleId}> (${mentions.length})\n`;
+        message += mentions.length ? mentions.join('\n') : '— لا يوجد أعضاء —';
+        message += `\n\n`;
+      }
+
+      await channel.send({ content: message });
+      await interaction.editReply({ content: '✅ تم تحديث القائمة بنجاح.' });
+
+    } catch (error) {
+      console.error("❌ خطأ أثناء التحديث:", error);
+      await interaction.editReply({ content: '❌ حصل خطأ أثناء التحديث.' });
+    }
+  }
+});
