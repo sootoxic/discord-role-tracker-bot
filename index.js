@@ -2,11 +2,15 @@ const { Client, GatewayIntentBits, Partials, SlashCommandBuilder, REST, Routes }
 require('dotenv').config();
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ],
   partials: [Partials.GuildMember]
 });
 
-// الرتب المستهدفة
 const adminRoles = [
   "1379000039099203684", "1379000028269645824", "1379000036339355738",
   "1379000045705101344", "1379000039929811015", "1379000042710630503",
@@ -19,64 +23,55 @@ const adminRoles = [
   "1379000085521895494"
 ];
 
-// إعدادات
 const GUILD_ID = process.env.GUILD_ID;
 const CHANNEL_ID = "1382947601070035044";
 
-// عند تشغيل البوت
 client.once('ready', async () => {
   console.log(`✅ Bot is ready as ${client.user.tag}`);
   await registerSlashCommand();
 });
 
-// تفعيل الأمر
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
+  if (interaction.commandName !== 'refresh') return;
 
-  if (interaction.commandName === 'تحديث_الرتب') {
-    await interaction.deferReply({ ephemeral: true });
+  await interaction.deferReply({ ephemeral: true });
 
-    try {
-      const guild = await client.guilds.fetch(GUILD_ID);
-      const channel = await guild.channels.fetch(CHANNEL_ID);
-      if (!channel || !channel.isTextBased()) {
-        return interaction.editReply({ content: '❌ لم يتم العثور على القناة المحددة أو لا يمكن الإرسال إليها.' });
-      }
-
-      // 👈 تحميل كل الأعضاء (الحل الأساسي للمشكلة)
-      const allMembers = await guild.members.fetch();
-
-      let message = `📋 **تقرير الرتب الإدارية**\n\n`;
-
-      for (const roleId of adminRoles) {
-        const role = await guild.roles.fetch(roleId);
-        if (!role) continue;
-
-        const members = allMembers.filter(member => member.roles.cache.has(roleId));
-        const mentions = members.map(member => `<@${member.user.id}>`);
-
-        message += `🔸 <@&${roleId}> (${mentions.length})\n`;
-        message += mentions.length ? mentions.join('\n') : '— لا يوجد أعضاء —';
-        message += `\n\n`;
-      }
-
-      await channel.send({ content: message });
-      await interaction.editReply({ content: '✅ تم تحديث القائمة بنجاح.' });
-
-    } catch (error) {
-      console.error("❌ خطأ أثناء التحديث:", error);
-      await interaction.editReply({ content: '❌ حصل خطأ أثناء التحديث.' });
+  try {
+    const guild = await client.guilds.fetch(GUILD_ID);
+    const channel = await guild.channels.fetch(CHANNEL_ID);
+    if (!channel || !channel.isTextBased()) {
+      return interaction.editReply({ content: '❌ لم يتم العثور على القناة المحددة أو لا يمكن الإرسال إليها.' });
     }
+
+    const allMembers = await guild.members.fetch();
+    let message = `📋 **تقرير الرتب الإدارية**\n\n`;
+
+    for (const roleId of adminRoles) {
+      const role = await guild.roles.fetch(roleId);
+      if (!role) continue;
+
+      const members = allMembers.filter(member => member.roles.cache.has(roleId));
+      const mentions = members.map(member => `<@${member.user.id}>`);
+
+      message += `🔸 <@&${roleId}> (${mentions.length})\n`;
+      message += mentions.length ? mentions.join('\n') : '— لا يوجد أعضاء —';
+      message += `\n\n`;
+    }
+
+    await channel.send({ content: message });
+    await interaction.editReply({ content: '✅ تم تحديث القائمة بنجاح.' });
+
+  } catch (error) {
+    console.error("❌ خطأ أثناء التحديث:", error);
+    await interaction.editReply({ content: '❌ حصل خطأ أثناء التحديث.' });
   }
 });
 
-
-// تسجيل أمر السلاش
-// تسجيل أمر السلاش
 async function registerSlashCommand() {
   const commands = [
     new SlashCommandBuilder()
-      .setName('refresh')  // ✅ تم التعديل هنا
+      .setName('refresh')
       .setDescription('📋 إرسال قائمة محدثة بأعضاء الرتب الإدارية')
       .toJSON()
   ];
@@ -94,42 +89,4 @@ async function registerSlashCommand() {
   }
 }
 
-// تفعيل الأمر
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  if (interaction.commandName === 'refresh') {  // ✅ تم التعديل هنا
-    await interaction.deferReply({ ephemeral: true });
-
-    try {
-      const guild = await client.guilds.fetch(GUILD_ID);
-      const channel = await guild.channels.fetch(CHANNEL_ID);
-      if (!channel || !channel.isTextBased()) {
-        return interaction.editReply({ content: '❌ لم يتم العثور على القناة المحددة أو لا يمكن الإرسال إليها.' });
-      }
-
-      const allMembers = await guild.members.fetch();
-
-      let message = `📋 **تقرير الرتب الإدارية**\n\n`;
-
-      for (const roleId of adminRoles) {
-        const role = await guild.roles.fetch(roleId);
-        if (!role) continue;
-
-        const members = allMembers.filter(member => member.roles.cache.has(roleId));
-        const mentions = members.map(member => `<@${member.user.id}>`);
-
-        message += `🔸 <@&${roleId}> (${mentions.length})\n`;
-        message += mentions.length ? mentions.join('\n') : '— لا يوجد أعضاء —';
-        message += `\n\n`;
-      }
-
-      await channel.send({ content: message });
-      await interaction.editReply({ content: '✅ تم تحديث القائمة بنجاح.' });
-
-    } catch (error) {
-      console.error("❌ خطأ أثناء التحديث:", error);
-      await interaction.editReply({ content: '❌ حصل خطأ أثناء التحديث.' });
-    }
-  }
-});
+client.login(process.env.BOT_TOKEN);
