@@ -64,8 +64,9 @@ client.on('interactionCreate', async interaction => {
 
   } catch (error) {
     console.error("❌ خطأ أثناء التحديث:", error);
-    await interaction.editReply({ content: '❌ حصل خطأ أثناء التحديث.' });
+    await interaction.editReply({ content: `❌ حصل خطأ أثناء التحديث:\n\`\`\`${error.message}\`\`\`` });
   }
+  
 });
 
 async function registerSlashCommand() {
