@@ -59,14 +59,26 @@ client.on('interactionCreate', async interaction => {
       message += `\n\n`;
     }
 
-    await channel.send({ content: message });
+    // ✅ تقسيم الرسالة إذا تجاوزت 2000 حرف
+    const MAX_LENGTH = 2000;
+    if (message.length <= MAX_LENGTH) {
+      await channel.send({ content: message });
+    } else {
+      const parts = [];
+      for (let i = 0; i < message.length; i += MAX_LENGTH) {
+        parts.push(message.slice(i, i + MAX_LENGTH));
+      }
+      for (const part of parts) {
+        await channel.send({ content: part });
+      }
+    }
+
     await interaction.editReply({ content: '✅ تم تحديث القائمة بنجاح.' });
 
   } catch (error) {
     console.error("❌ خطأ أثناء التحديث:", error);
     await interaction.editReply({ content: `❌ حصل خطأ أثناء التحديث:\n\`\`\`${error.message}\`\`\`` });
   }
-  
 });
 
 async function registerSlashCommand() {
